@@ -3,7 +3,7 @@ pub mod cg;
 use std::io::{self, Read};
 use std::time::{SystemTime, UNIX_EPOCH};
 use clap::{Args, Parser, Subcommand};
-use chrono::{Utc, TimeZone};
+use chrono::{FixedOffset, Local, Offset, Utc, TimeZone};
 use chrono_tz::Tz;
 use adb_client::{ADBServer, ADBDeviceExt};
 
@@ -23,6 +23,8 @@ enum Commands {
     DNS(Dnsa),
     #[command(visible_alias = "totp")]
     TOTP(Totpa),
+    #[command(visible_alias = "reset")]
+    Reset,
 }
 
 #[derive(Args)]
@@ -51,6 +53,7 @@ fn main() {
         Some(Commands::DE) => de(),
         Some(Commands::DNS) => dns(),
         Some(Commands::TOTP) => totp(),
+        Some(Commands::Reset) => reset(),
         None => {
             println!("Usage: 'pun chronolink <hrs>' for chronolink exploit (time travel to a time where you didnt have downtime with hrs)");
             println!("       'pun dns <hostname> (hostname is optional)' for DNS exploit");
@@ -66,7 +69,25 @@ fn alogo() -> Vec<String> {
 }
 
 fn de() {
+    let mut device = get_device();
+    let cc = format("'{}'", Local::now());
 
+    device.shell_command(&["echo", cc, ">", "/storage/emulated/0/tz.tmp"], &mut std::io::stdout());//cache on device or pc?
+    println!("Cached current timezone");
+    //get tz automatically
+    let utc = Local::now().offset().fix().local_minus_utc()/3600-args.hours;
+
+    let sign = if utc>=0{"+"} else {"-"};
+    let tz = format!("Etc/GMT{}{}",if utc>=0{"-"}else{"+"},utc.abs());
+    match FixedOffset::east_opt(target_offset_hours*3600){
+        Some(o)=>println!("Offset valid"),
+        None=>{println!("Offset invalid");std::process::exit(0);}
+    }
+    println!("Got timezone!");
+    //set tz
+    device.shell_command(&["service", "call", "alarm", "3", "s16", tz], &mut std::io::stdout());
+    println!("Done!");
+    eq();
 }
 
 fn dns() {
@@ -81,6 +102,7 @@ fn dns() {
     println!("Private DNS mode set to hostname");
     device.shell_command(&["settings", "put", "global", "private_dns_specifier", host], &mut std::io::stdout());
     println!("Private DNS specifier set to exploited dns");
+    println!("Done!");
     eq();
 }
 
@@ -93,6 +115,7 @@ fn totp() {
     }
 
     println!("parent code: {}", generate_fl_code(args.secret, ast));
+    println!("Done!");
     eq();
 }
 
@@ -102,10 +125,14 @@ fn reset() {
     //reset dns
     println!("Resetting Private DNS settings");
     device.shell_command(&["settings", "put", "global", "private_dns_mode", "off"], &mut std::io::stdout());
-    println!("Done!")
+    println!("Done!");
 
     //reset tz
-
+    println!("Resetting timezone");
+    let cachedtz = device.shell_command(&["cat", "/storage/emulated/0/tz.tmp"], &mut std::io::stdout());
+    device.shell_command(&["service", "call", "alarm", "3", "s16", cachedtz], &mut std::io::stdout());
+    println!("Done!");
+    eq();
 }
 
 fn eq() {
