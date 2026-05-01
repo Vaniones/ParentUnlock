@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+adb_client = "2.1.15"
+chrono = "0.4.44"
+chrono-tz = "0.10.4"
+clap = { version = "4.5.61", features = ["derive"] }
+hmac = "0.12.1"
+sha1 = "0.10.6"
