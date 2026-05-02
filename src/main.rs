@@ -1,11 +1,11 @@
 pub mod exploits;
 
 use std::io::{self, Read};
-use std::time::{SystemTime, UNIX_EPOCH};
-use clap::{Args, Parser, Subcommand};
-use chrono::{FixedOffset, Local, Offset, Utc, TimeZone};
-use chrono_tz::Tz;
-use adb_client::{ADBServer, ADBDeviceExt};
+//use std::time::{SystemTime, UNIX_EPOCH};
+use clap::{Parser, Subcommand};
+//use chrono::{FixedOffset, Local, Offset, Utc, TimeZone};
+//use chrono_tz::Tz;
+use adb_client::ADBDeviceExt;
 
 use crate::exploits::{dualapp, fixbedtime, forcehl, removefl, removegms, seconduser};
 
@@ -19,54 +19,74 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(visible_alias = "chronolink")]
-    DE(Dea),
-    #[command(visible_alias = "dns")]
-    DNS(Dnsa),
-    #[command(visible_alias = "totp")]
-    TOTP(Totpa),
-    #[command(visible_alias = "removefl")]
+    #[command(visible_alias = "chronolink",about = "for chronolink exploit (time travel to a time where you didnt have downtime with hrs)")]
+    DE {
+        #[arg(help = "Subtract hours")]
+        hours: u64,
+    },
+    #[command(about = "for DNS exploit (hostname is optional)")]
+    DNS {
+        #[arg(help = "Optional DNS hostname")]
+        host: Option<String>,
+    },
+    #[command(about = "for TOTP exploit (needs shared secret) (timestamp is optional)")]
+    TOTP {
+        #[arg(help = "Shared secret ")]
+        secret: String,
+
+        #[arg(help = "Optional timestamp for generating codes for the future")]
+        ts: Option<u64>,
+    },
+    #[command(visible_alias = "removefl", about = "to remove FL and mi security center")]
     RFL,
-    #[command(visible_alias = "2space")]
+    #[command(visible_alias = "2space", about = "for second space exploit (hyperos)")]
     SECONDSPACE,
-    #[command(visible_alias = "removegms")]
+    #[command(about = "to remove gms.supervision")]
     REMOVEGMS,
-    #[command(visible_alias = "fixbedtime")]
+    #[command(about = "to fix the bedtime screen")]
     FIXBEDTIME,
-    #[command(visible_alias = "forcehl")]
+    #[command(about = "to force the hyper launcher (hyperos?)")]
     FORCEHL,
-    #[command(visible_alias = "2user")]
+    #[command(visible_alias = "2user", about = "to make a second user and then switch the current user to the second one")]
     SECONDUSER,
-    #[command(visible_alias = "reset")]
+    #[command(about = "to reset every exploit (almost)")]
     Reset,
 }
 
-#[derive(Args)]
-pub struct Totpa {
-    pub secret: String,
+// #[derive(Args)]
+// pub struct Totpa {
+//     pub secret: String,
 
-    pub ts: Option<u64>
-}
+//     pub ts: Option<u64>
+// }
 
-pub struct Dns {
-    pub host: String,
-}
+// pub struct Dns {
+//     pub host: String,
+// }
 
-pub struct Dea {
-    pub hours: u64,
-}
+// pub struct Dea {
+//     pub hours: u64,
+// }
 
 fn main() {
-    for l in alogo() {
+    for line in alogo() {
         println!("{}", line);
     }
     
     let cli = Cli::parse();
     
     match cli.command {
-        Some(Commands::DE(Dea)) => de(),
-        Some(Commands::DNS(Dnsa)) => dns(),
-        Some(Commands::TOTP(Totpa)) => totp(),
+        Some(Commands::DE {
+            hours,
+        }) => exploits::de(hours),
+        Some(Commands::DNS {
+            host,
+        }) => exploits::dns(host),
+        Some(Commands::TOTP {
+            secret,
+    
+            ts
+        }) => exploits::totp(secret, ts),
         Some(Commands::RFL) => removefl(),
         Some(Commands::SECONDSPACE) => dualapp(),
         Some(Commands::REMOVEGMS) => removegms(),
@@ -75,16 +95,18 @@ fn main() {
         Some(Commands::SECONDUSER) => seconduser(),
         Some(Commands::Reset) => reset(),
         None => {
-            println!("Usage: 'pun chronolink <hrs>' for chronolink exploit (time travel to a time where you didnt have downtime with hrs)");
-            println!("       'pun dns <hostname> (hostname is optional)' for DNS exploit");
-            println!("       'pun totp <SECRET> <TS>' for TOTP exploit (needs shared secret) (timestamp is optional)");
-            println!("       'pun removefl' to remove FL and mi security center");
-            println!("       'pun 2space' for second space exploit (hyperos)");
-            println!("       'pun removegms' to remove gms.supervision");
-            println!("       'pun fixbedtime' to fix the bedtime screen");
-            println!("       'pun forcehl' to force the hyper launcher (hyperos?)");
-            println!("       'pun 2user' to make a second user and then switch the current user to the second one");
-            println!("       'pun reset' to reset every exploit (almost)");
+            // println!("Usage: 'pun chronolink <hrs>' for chronolink exploit (time travel to a time where you didnt have downtime with hrs)");
+            // println!("       'pun dns <hostname>' for DNS exploit (hostname is optional)");
+            // println!("       'pun totp <SECRET> <TS>' for TOTP exploit (needs shared secret) (timestamp is optional)");
+            // println!("       'pun removefl' to remove FL and mi security center");
+            // println!("       'pun 2space' for second space exploit (hyperos)");
+            // println!("       'pun removegms' to remove gms.supervision");
+            // println!("       'pun fixbedtime' to fix the bedtime screen");
+            // println!("       'pun forcehl' to force the hyper launcher (hyperos?)");
+            // println!("       'pun 2user' to make a second user and then switch the current user to the second one");
+            // println!("       'pun reset' to reset every exploit (almost)");
+            println!("use --help, -h or help for usage");
+            println!("use --version or -V for version number");
             std::process::exit(0);
         }
     }
@@ -146,17 +168,18 @@ fn alogo() -> Vec<String> {
 // }
 
 fn reset() {
-    let mut device = get_device();
+    let mut device = exploits::get_device();
 
     //reset dns
     println!("Resetting Private DNS settings");
-    device.shell_command(&["settings", "put", "global", "private_dns_mode", "off"], &mut std::io::stdout());
+    let _ = device.shell_command(&["settings", "put", "global", "private_dns_mode", "off"], &mut std::io::stdout());
     println!("Done!");
 
     //reset tz
     println!("Resetting timezone");
-    let cachedtz = device.shell_command(&["cat", "/storage/emulated/0/tz.tmp"], &mut std::io::stdout());
-    device.shell_command(&["service", "call", "alarm", "3", "s16", cachedtz], &mut std::io::stdout());
+    let mut cachedtz = Vec::new();
+    let _ = device.shell_command(&["cat", "/storage/emulated/0/tz.tmp"], &mut cachedtz);
+    let _ = device.shell_command(&["service", "call", "alarm", "3", "s16", &exploits::vec2str(cachedtz)], &mut std::io::stdout());
     println!("Done!");
     eq();
 }
