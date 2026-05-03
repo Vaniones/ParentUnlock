@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 //use chrono_tz::Tz;
 use adb_client::ADBDeviceExt;
 
-use crate::exploits::{dualapp, fixbedtime, forcehl, removefl, removegms, seconduser};
+use crate::exploits::{dualapp, fixbedtime, forcehl, has_package, removefl, removegms, seconduser};
 
 #[derive(Parser)]
 #[command(name = "pun", version = "1.0")]
@@ -180,6 +180,37 @@ fn reset() {
     let mut cachedtz = Vec::new();
     let _ = device.shell_command(&["cat", "/storage/emulated/0/tz.tmp"], &mut cachedtz);
     let _ = device.shell_command(&["service", "call", "alarm", "3", "s16", &exploits::vec2str(cachedtz)], &mut std::io::stdout());
+    println!("Done!");
+
+    //reset fix bedtime
+    // println!("Resetting fixbedtime");
+    // device.shell_command(&["settings", "put", "secure", "accessibility_display_daltonizer_enabled", "1"], &mut std::io::stdout());
+    // println!("Done!");
+    // these docs are confusing me https://gist.github.com/mrk-han/67a98616e43f86f8482c5ee6dd3faabe
+
+    //reset removegms
+    println!("Resetting removegms");
+    if !has_package("com.google.android.gms.supervision") {
+        device.shell_command(&["pm", "install-existing", "com.google.android.gms.supervision"], &mut std::io::stdout());
+    }
+    println!("Done!");
+ 
+    //reset removefl
+    println!("Resetting removefl");
+    if !has_package("com.miui.securitycenter") {
+        device.shell_command(&["pm", "install-existing", "com.miui.securitycenter"], &mut std::io::stdout());
+    }
+    if !has_package("com.google.android.apps.kids.familylinkhelper") {
+        device.shell_command(&["pm", "install-existing", "com.google.android.apps.kids.familylinkhelper"], &mut std::io::stdout());
+    }
+    println!("Done!");
+
+    //reset 2user
+    println!("Resetting 2user");
+    device.shell_command(&["am", "switch-user", "0"], &mut std::io::stdout());
+    println!("Switched user to 0");
+    println!("Removing  second user");
+    device.shell_command(&["pm", "remove-user", "10"], &mut std::io::stdout());
     println!("Done!");
     eq();
 }
