@@ -19,25 +19,25 @@ U is untested
 9. `pun 2user` to make a second user and then switch the current user to the second one (U)
 10. `pun reset` to reset every exploit (almost, not yet done) (U)
 
-If you find anymore exploits/bypasses by ADB, or you see a typo or a bug, please PR.
+If you find anymore exploits/bypasses w/ ADB, or you see a typo or a bug, please PR.
 
 ## How to actually use it
 >[!WARNING]
->You need a computer with ADB installed and a device with developer options and usb debugging enabled for this to work. Developer options can be enabled on the parent familyLink app.
+>You need a computer with ADB installed and a device with developer options and USB debugging enabled for this to work. Developer options can be enabled on the parent Family Link app.
 
-1. Connect your device to your computer using a usb cable or wifi
-2. Download latest ver. from releases
+1. Connect your device to your computer using a USB cable or wifi
+2. Download latest version from releases
 3. Open terminal where your binary is
-4. Run (replace <exploit> with exploit from usage):
-   1) Linux & MacOS: `./pun <exploit`
+4. Run (replace `<exploit>` with exploit from usage):
+   1) Linux & MacOS: `./pun <exploit>`
    2) Windows: `pun <exploit>`
 
 ## Troubleshooting
 
 ### "Device not found" error
-Turn on dev options and usb debugging
+Turn on dev options and USB debugging
 Reconnect cable
-Reconnect with device using adb if your using wifi
+Reconnect with device using ADB if your using wifi
 
 ### Cannot run program on Linux/MacOS
 1. Open terminal where your binary is
